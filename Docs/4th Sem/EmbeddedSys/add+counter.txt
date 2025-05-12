@@ -1,0 +1,195 @@
+---FULL ADD----
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+--Entity
+ENTITY full_add IS 
+port (A,B,Cin: in Std_logic;
+      S,Cout: out Std_logic);
+end full_add;
+Architecture Arch of full_add is
+Begin
+S<= A XOR B XOR Cin;	
+Cout <= (A AND B) or (Cin and (A XOR B)); 
+end Arch;
+
+---TEST FULL ADD---
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+--Entity
+ENTITY full_add_tb IS
+end full_add_tb;
+Architecture test of full_add_tb is
+component full_add
+port(A : in std_logic;
+     B : in std_logic;
+     Cin : in std_logic;
+     S : out std_logic;
+     Cout : out std_logic);
+end component;
+signal A_tb,B_tb,Cin_tb,S_tb,Cout_tb : std_logic;
+Begin 
+DUT : full_add port MAP (A=>A_tb,
+                         B=>B_tb,
+                         Cin=>Cin_tb,
+                         S=>S_tb,
+                         Cout=>Cout_tb);
+process
+begin 
+A_tb<='0'; B_tb<='0' ;Cin_tb<='0';
+wait for 20 ns;
+A_tb<='1';
+wait for 20 ns;
+A_tb<='0'; B_tb<='1';
+wait for 20 ns;
+A_tb<='1';
+wait for 20 ns;
+A_tb<='0'; B_tb<='0';Cin_tb<='1';
+wait for 20 ns;
+A_tb<='1';
+wait for 20 ns;
+A_tb<='0'; B_tb<='1';
+wait for 20 ns;
+A_tb<='1';
+wait for 20 ns;
+end process;
+end test;
+
+---MUX---
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+--Entity
+ENTITY mux IS 
+port (A,B,Sel: in Std_logic;
+      S: out Std_logic);
+end mux;
+Architecture Arch of mux is
+Begin
+Process (A,B,Sel)
+Begin
+if Sel ='0' then S<= A;
+else S<=B;
+end if;
+end process; 
+end Arch;
+
+---XOR---
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+--Entity
+ENTITY xorr IS 
+port (A,B: in Std_logic;
+      S: out Std_logic);
+end xorr;
+Architecture Arch of xorr is
+Begin
+Process (A,B)
+Begin
+S<=A xor B;
+end process; 
+end Arch;
+
+---ADDITIONNEUR 4 BITS---
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+--Entity
+ENTITY addsub4 IS 
+port (A,B: in Std_logic_vector (3 downto 0);
+	M : in std_logic;
+	S : out std_logic_vector (3 downto 0);
+	Mcov, Ovf, Cf : out Std_logic);
+end addsub4;
+architecture sa4 of addsub4 is
+component full_adder
+port   (A: in Std_logic;
+	B: in Std_logic;
+	Cin: in Std_logic;
+	S: out Std_logic;
+	Cout: out Std_logic);
+end component;
+component mux
+port   (A: in Std_logic;
+	B: in Std_logic;
+	Sel: in Std_logic;
+	S: out Std_logic);
+end component;
+component xorr
+port   (A: in Std_logic;
+	B: in Std_logic;
+	S: out Std_logic);
+end component;
+signal Bx :Std_logic_vector (3 downto 0);
+signal C :Std_logic_vector (4 downto 0);
+signal Ovf_m :Std_logic;
+Begin
+FA0: full_adder port map (A=>A(0), B=>Bx(0),Cin=>C(0),S=>S(0),Cout=>C(1));
+FA1: full_adder port map (A=>A(1), B=>Bx(1),Cin=>C(1),S=>S(1),Cout=>C(2));
+FA2: full_adder port map (A=>A(2), B=>Bx(2),Cin=>C(2),S=>S(2),Cout=>C(3));
+FA3: full_adder port map (A=>A(3), B=>Bx(3),Cin=>C(3),S=>S(3),Cout=>C(4));
+Xor0: xorr port map (A=>M, B=>B(0) ,S=>Bx(0));
+Xor1: xorr port map (A=>M, B=>B(1) ,S=>Bx(1));
+Xor2: xorr port map (A=>M, B=>B(2) ,S=>Bx(2));
+Xor3: xorr port map (A=>M, B=>B(3) ,S=>Bx(3));
+Xor4: xorr port map (A=>C(4), B=>C(3) ,S=>Ovf_m);
+Mux0: mux port map (A=>C(4), B=>Ovf_m,Sel=>M,S=>Mcov);
+Ovf<=Ovf_m;
+Cf<=C(4);
+C(0)<=M;
+end sa4;
+
+---COUNTER---
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.STD_LOGIC_arith.ALL;
+use IEEE.STD_LOGIC_unsigned.ALL;
+entity counter is 
+port (clk,clr,enable,pause: in std_logic;
+	q: out std_logic_vector( 3 downto 0));
+end counter;
+architecture arch of counter is
+signal q_int : std_logic_vector(3 downto 0);
+begin
+process(clk,clr)
+begin
+if (clr='1') then q_int <="0000";
+elsif(clk'event and clk ='1') then
+if (enable='0') then
+q_int<= "0000";
+else if (pause='1') then
+q_int <= q_int;
+else q_int<=q_int +1;
+end if;
+end if;
+end if;
+end process;
+q<=q_int;
+end arch;
+
+---TEST COUNTER---
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+
+entity tb_counter is 
+end tb_counter;
+
+architecture test of tb_counter is
+component counter
+port (clk,clr,enable,pause: in std_logic;
+	q: out std_logic_vector( 3 downto 0));
+end component;
+
+signal clk_tb,clr_tb,enable_tb,pause_tb: std_logic:= '0';
+signal q_tb: std_logic_vector( 3 downto 0);
+begin
+ddd: counter port map (clk=>clk_tb,clr=>clr_tb,enable=>enable_tb,pause=>pause_tb,q=>q_tb);
+clk_tb <= not (clk_tb) after 10 ns;
+stimulate:  process
+begin
+clr_tb <='1'; wait for 10 ns ;
+clr_tb <='0';
+enable_tb <='0'; wait for 100 ns;
+enable_tb <='1'; wait for 200 ns;
+pause_tb <='1'; wait for 60 ns;
+pause_tb <='0'; wait for 180 ns;
+enable_tb <='0';
+end process;
+end test;

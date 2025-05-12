@@ -1,0 +1,67 @@
+#include "stdint.h"
+#include "stm32f4xx.h"
+
+uint32_t count = 0;
+uint32_t cycle = 0;
+int direction = 0;
+int last_button = 0;
+int leds[4] = {12,13,14,15};
+
+
+
+void GPIO_Configure(GPIO_TypeDef  *GPIOx, uint32_t pin, uint32_t mode, uint32_t otype, uint32_t ospeed, uint32_t updown  ){
+	GPIOx->MODER = (GPIOx->MODER & ~(3 << pin*2)) | (mode << pin*2);
+	GPIOx->OTYPER = (GPIOx->OTYPER & ~(1 << pin)) | (otype << pin);
+	GPIOx->OSPEEDR = (GPIOx->OSPEEDR & ~(3 << pin*2)) | (ospeed << pin*2);
+	GPIOx->PUPDR = (GPIOx->PUPDR & ~(3 << pin*2)) | (updown << pin*2);
+}
+
+uint32_t GPIO_PinRead (GPIO_TypeDef *GPIOx, uint32_t num){
+// à compléter
+}
+void GPIO_PinWrite (GPIO_TypeDef *GPIOx, uint32_t num, uint32_t val){
+// à compléter
+}
+
+
+
+
+void write_leds(){
+	if(direction)
+		cycle ++;
+	else
+		cycle --;
+	for(int i=0; i< 4; i++)	
+		GPIO_PinWrite(GPIOD,leds[i],0);
+	
+	GPIO_PinWrite(GPIOD,leds[cycle%4],1);
+	
+}
+
+void read_button(){
+	int t = GPIO_PinRead(GPIOA,0);
+	if(t==1){
+		if(t!=last_button){
+			last_button = t;
+			direction = !direction;
+		}
+	}else{
+		last_button = 0;
+	}
+}
+
+void SysTick_Handler(){
+	count ++;
+	if(count % 10 == 0)
+		write_leds();
+	read_button();
+	
+}
+
+void RCC_GPIO_Enable(int mask){
+	RCC->AHB1ENR |= mask;
+}
+
+int main(){
+
+}
